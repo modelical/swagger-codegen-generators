@@ -11,16 +11,14 @@ from {{packageName}}.test import BaseTestCase
 
 
 class {{#operations}}Test{{classname}}(BaseTestCase):
-    """{{classname}} integration test stubs"""
+    """{{classname}} integration test stubs."""
 
    {{#operation}}
-   {{#contents}}
-   {{#@first}}
     def test_{{operationId}}(self):
-        """Test case for {{{operationId}}}
+        """Test case for {{{operationId}}}.{{#summary}}
 
         {{{summary}}}
-        """
+        {{/summary}}"""
         {{#bodyParam}}
         {{paramName}} = {{{example}}}
         {{/bodyParam}}
@@ -45,8 +43,6 @@ class {{#operations}}Test{{classname}}(BaseTestCase):
         self.assert200(response,
                        'Response body is : ' + response.data.decode('utf-8'))
 
-   {{/@first}}
-   {{/contents}}
    {{/operation}}
 {{/operations}}
 

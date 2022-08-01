@@ -1,40 +1,356 @@
-package {{package}};
+##
+package {{basePackage}}.entities
 
-{{^x-is-composed-model}}
-import java.util.Objects;
-{{#imports}}import {{import}};
-{{/imports}}
-{{#serializableModel}}
-import java.io.Serializable;
-{{/serializableModel}}
-{{#useBeanValidation}}
-import org.springframework.validation.annotation.Validated;
-import javax.validation.Valid;
-import javax.validation.constraints.*;
-{{/useBeanValidation}}
-{{#jackson}}
-{{#withXml}}
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement;
-import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty;
-{{/withXml}}
-{{/jackson}}
-{{#withXml}}
-import javax.xml.bind.annotation.*;
-{{/withXml}}
-{{/x-is-composed-model}}
+import javax.persistence.Column;
+import javax.persistence.Embedded;
+import javax.persistence.Entity;
+import javax.persistence.EnumType;
+import javax.persistence.Enumerated;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.Inheritance;
+import javax.persistence.InheritanceType;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
+import javax.persistence.Table;
+
+import org.hibernate.annotations.Type;
+
+/**
+ * This class represents a {#lowercase}{{classname}}{/lowercase}.
+ */
+@Entity
+@Table(name = "{#lowercase}{{classname}}{/lowercase}")
+public abstract class {{classname}} {
 
 {{#models}}
 {{#model}}
-{{#isComposedModel}}
-{{>interface}}
-{{/isComposedModel}}
-{{^isComposedModel}}
-{{#isEnum}}
-{{>enumOuterClass}}
-{{/isEnum}}
-{{^isEnum}}
-{{>pojo}}
-{{/isEnum}}
-{{/isComposedModel}}
+{{#vars}}
+	private {{{datatype}}} {{name}};
+{{/vars}}
 {{/model}}
 {{/models}}
+
+	public {{classname}}() {
+		super();
+	}
+
+	@PrePersist
+	public void onCreate() {
+	}
+
+	@PreUpdate
+	public void onUpdate() {
+	}
+
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+{{#models}}
+{{#model}}
+{{#vars}}
+	@Column(name = "{{name}}")
+	public {{{datatype}}} get{#uppercase}{{name}}{/uppercase}() {
+		return {{name}};
+	}
+
+	public void set{#uppercase}{{name}}{/uppercase}({{{datatype}}} {{name}}) {
+		this.{{name}} = {{name}};
+	}
+	
+{{/vars}}
+{{/model}}
+{{/models}}
+
+}
+
+##Controller
+package {{basePackage}}.controllers;
+
+import java.io.IOException;
+import java.util.Optional;
+import java.util.UUID;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletResponse;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import {{basePackage}}.controllers.dtos.{{classname}}Dto;
+import {{basePackage}}.entities.{{classname}};
+import {{basePackage}}.services.{{classname}}Service;
+
+@RestController
+@RequestMapping("/{#lowercase}{{classname}}{/lowercase}s")
+public class {{classname}}Controller {
+
+	@Resource
+	private ModelMapper mapper;
+
+	@Resource
+	private {{classname}}Service {#lowercase}{{classname}}{/lowercase}Service;
+
+	@RequestMapping(path = "/{uuid}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public {{classname}}Dto get(@PathVariable UUID uuid) {
+		{{classname}} {#lowercase}{{classname}}{/lowercase} = {#lowercase}{{classname}}{/lowercase}Service.get(uuid);
+
+		return mapper.map({#lowercase}{{classname}}{/lowercase}, {{classname}}Dto.class);
+	}
+
+	@RequestMapping(method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public Page<{{classname}}Dto> list(@RequestParam Integer page, @RequestParam Integer size, @RequestParam String sortField, @RequestParam Boolean sortOrder,
+		@RequestParam Optional<String> searchText) {
+		Page<{{classname}}> {#lowercase}{{classname}}{/lowercase}sPage = {#lowercase}{{classname}}{/lowercase}Service.list(page, size, sortField, sortOrder, searchText);
+
+		return {#lowercase}{{classname}}{/lowercase}sPage.map(p -> mapper.map(p, {{classname}}Dto.class));
+	}
+
+	@RequestMapping(value = "/spreadsheets", method = RequestMethod.GET, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	public void exportSpreadsheet(@RequestParam String sortField, @RequestParam Boolean sortOrder, @RequestParam Optional<String> searchText,
+		HttpServletResponse response) throws IOException {
+		try {
+			{#lowercase}{{classname}}{/lowercase}Service.exportSpreadsheet(sortField, sortOrder, searchText, response.getOutputStream());
+			response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+			response.flushBuffer();
+		} catch (IOException e) {
+			response.getOutputStream().close();
+		}
+	}
+
+}
+
+##Dto
+package {{basePackage}}.controllers.dtos;
+
+import java.util.UUID;
+
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Null;
+
+import com.modelical.preconnector.api.controllers.helpers.CreateOperation;
+import com.modelical.preconnector.api.controllers.helpers.UpdateOperation;
+import com.modelical.preconnector.api.entities.{{classname}};
+
+/**
+ * This class represents the data transfer object of an {@link "{{classname}}"}.
+ */
+public class {{classname}}Dto {
+
+{{#models}}
+{{#model}}
+{{#vars}}
+	private {{{datatype}}} {{name}};
+{{/vars}}
+{{/model}}
+{{/models}}
+
+	@Null(groups = CreateOperation.class)
+	@NotNull(groups = UpdateOperation.class)
+{{#models}}
+{{#model}}
+{{#vars}}
+	public {{{datatype}}} get{#uppercase}{{name}}{/uppercase}() {
+		return {{name}};
+	}
+
+	public void set{#uppercase}{{name}}{/uppercase}({{{datatype}}} {{name}}) {
+		this.{{name}} = {{name}};
+	}
+	
+{{/vars}}
+{{/model}}
+{{/models}}
+}
+
+##Dao
+package {{basePackage}}.daos
+
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+
+/**
+ * This class represents the data access object of a {@link "{{classname}}"}.
+ */
+public interface {{classname}}Dao extends JpaRepository<{{classname}}, Long> {
+
+}
+
+
+##Service
+package {{basePackage}}.services;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Optional;
+import java.util.UUID;
+
+import org.springframework.data.domain.Page;
+
+import {{basePackage}}.entities.{{classname}};
+
+/**
+ * This interface represents the {#lowercase}{{classname}}{/lowercase}s service.
+ */
+public interface {{classname}}Service {
+
+	/**
+	 * Returns the {#lowercase}{{classname}}{/lowercase}s using pagination and filtered by search text.
+	 * @param page - the page
+	 * @param size - the page size
+	 * @param sortField - the sorting field
+	 * @param sortOrder - the sorting order
+	 * @param searchText - the search text
+	 * @return the {#lowercase}{{classname}}{/lowercase}s
+	 */
+	Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, Optional<String> searchText);
+
+	/**
+	 * Returns all {#lowercase}{{classname}}{/lowercase}s.
+	 * @return the {#lowercase}{{classname}}{/lowercase}s
+	 */
+	List<{{classname}}> list();
+
+	/**
+	 * Returns a {#lowercase}{{classname}}{/lowercase}.
+	 * @param id - the {#lowercase}{{classname}}{/lowercase} id
+	 * @return the {#lowercase}{{classname}}{/lowercase}
+	 */
+	{{classname}} get(Long id);
+
+	/**
+	 * Returns the current {#lowercase}{{classname}}{/lowercase}.
+	 * @return the current {#lowercase}{{classname}}{/lowercase}
+	 */
+	{{classname}} get();
+
+	/**
+	 * Creates a {#lowercase}{{classname}}{/lowercase}.
+	 * @param {#lowercase}{{classname}}{/lowercase} - the {#lowercase}{{classname}}{/lowercase} to be created
+	 * @return the {#lowercase}{{classname}}{/lowercase}
+	 */
+	{{classname}} create({{classname}} {#lowercase}{{classname}}{/lowercase});
+
+	/**
+	 * Updates a {#lowercase}{{classname}}{/lowercase}
+	 * @param {#lowercase}{{classname}}{/lowercase} - the {#lowercase}{{classname}}{/lowercase} to be updated
+	 * @return the {#lowercase}{{classname}}{/lowercase}
+	 */
+	{{classname}} update({{classname}} {#lowercase}{{classname}}{/lowercase});
+
+}
+
+##ServiceImpl
+package {{basePackage}}.services.impl;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+
+import javax.annotation.Resource;
+import javax.mail.MessagingException;
+import javax.mail.internet.MimeMessage;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.InputStreamSource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+
+import {{basePackage}}.Properties;
+import {{basePackage}}.daos.{{classname}}Dao;
+import {{basePackage}}.entities.{{classname}};
+import {{basePackage}}.exceptions.DuplicateException;
+import {{basePackage}}.exceptions.NotFoundException;
+import {{basePackage}}.services.{{classname}}Service;
+
+@Service
+public class {{classname}}ServiceImpl implements {{classname}}Service {
+
+	@Autowired
+	private Properties properties;
+
+	@Resource
+	private {{classname}}Dao {#lowercase}{{classname}}{/lowercase}Dao;
+
+	@Override
+	@Transactional(readOnly = true)
+	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, Optional<String> searchText) {
+		Page<{{classname}}> {#lowercase}{{classname}}{/lowercase}s;
+		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
+		
+		{#lowercase}{{classname}}{/lowercase}s = {#lowercase}{{classname}}{/lowercase}Dao.findAll(pageable);
+
+		return {#lowercase}{{classname}}{/lowercase}s;
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<{{classname}}> list() {
+		return {#lowercase}{{classname}}{/lowercase}Dao.findAll();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public {{classname}} get(Long id) {
+		return {#lowercase}{{classname}}{/lowercase}Dao.findById(id).orElseThrow(() -> new NotFoundException("{#lowercase}{{classname}}{/lowercase} not found"));
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public {{classname}} get() {
+		{{classname}} {#lowercase}{{classname}}{/lowercase} = {#lowercase}{{classname}}{/lowercase}Dao.findById(authService.get{{classname}}Id()).orElseThrow(() -> new NotFoundException("{#lowercase}{{classname}}{/lowercase} not found"));
+
+		return {#lowercase}{{classname}}{/lowercase};
+	}
+
+	@Override
+	@Transactional
+	public {{classname}} create({{classname}} {#lowercase}{{classname}}{/lowercase}) {
+	
+		validate({#lowercase}{{classname}}{/lowercase});
+
+		return {#lowercase}{{classname}}{/lowercase}Dao.save({#lowercase}{{classname}}{/lowercase});
+	}
+
+	@Override
+	@Transactional
+	public {{classname}} update({{classname}} {#lowercase}{{classname}}{/lowercase}) {
+
+		validate({#lowercase}{{classname}}{/lowercase});
+
+		return {#lowercase}{{classname}}{/lowercase}Dao.save({#lowercase}{{classname}}{/lowercase});
+	}
+
+	/**
+	 * Validates a {#lowercase}{{classname}}{/lowercase}.
+	 * @param {#lowercase}{{classname}}{/lowercase} - the {#lowercase}{{classname}}{/lowercase}
+	 */
+	private void validate({{classname}} {#lowercase}{{classname}}{/lowercase}) {
+	}
+
+}
