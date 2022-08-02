@@ -1,5 +1,5 @@
 ##
-package {{basePackage}}.entities
+package {{basePackage}}.entities;
 
 import javax.persistence.Column;
 import javax.persistence.Embedded;
@@ -15,13 +15,20 @@ import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
 import javax.persistence.Table;
 
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
 import org.hibernate.annotations.Type;
+import org.hibernate.annotations.TypeDef;
+
+import com.vladmihalcea.hibernate.type.json.JsonType;
 
 /**
  * This class represents a {#lowercase}{{classname}}{/lowercase}.
  */
 @Entity
 @Table(name = "{#lowercase}{{classname}}{/lowercase}")
+@TypeDef(name = "json", typeClass = JsonType.class)
 public abstract class {{classname}} {
 
 {{#models}}
@@ -49,7 +56,13 @@ public abstract class {{classname}} {
 {{#models}}
 {{#model}}
 {{#vars}}
+{{#isObject}}
+	@Type(type = "json")
+	@Column(columnDefinition = "json")
+{{/isObject}}
+{{^isObject}}
 	@Column(name = "{{name}}")
+{{/isObject}}
 	public {{{datatype}}} get{#uppercase}{{name}}{/uppercase}() {
 		return {{name}};
 	}
@@ -57,7 +70,7 @@ public abstract class {{classname}} {
 	public void set{#uppercase}{{name}}{/uppercase}({{{datatype}}} {{name}}) {
 		this.{{name}} = {{name}};
 	}
-	
+
 {{/vars}}
 {{/model}}
 {{/models}}
@@ -69,7 +82,6 @@ package {{basePackage}}.controllers;
 
 import java.io.IOException;
 import java.util.Optional;
-import java.util.UUID;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
@@ -97,9 +109,9 @@ public class {{classname}}Controller {
 	@Resource
 	private {{classname}}Service {#lowercase}{{classname}}{/lowercase}Service;
 
-	@RequestMapping(path = "/{uuid}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public {{classname}}Dto get(@PathVariable UUID uuid) {
-		{{classname}} {#lowercase}{{classname}}{/lowercase} = {#lowercase}{{classname}}{/lowercase}Service.get(uuid);
+	@RequestMapping(path = "/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+	public {{classname}}Dto get(@PathVariable Long id) {
+		{{classname}} {#lowercase}{{classname}}{/lowercase} = {#lowercase}{{classname}}{/lowercase}Service.get(id);
 
 		return mapper.map({#lowercase}{{classname}}{/lowercase}, {{classname}}Dto.class);
 	}
@@ -112,17 +124,17 @@ public class {{classname}}Controller {
 		return {#lowercase}{{classname}}{/lowercase}sPage.map(p -> mapper.map(p, {{classname}}Dto.class));
 	}
 
-	@RequestMapping(value = "/spreadsheets", method = RequestMethod.GET, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	public void exportSpreadsheet(@RequestParam String sortField, @RequestParam Boolean sortOrder, @RequestParam Optional<String> searchText,
-		HttpServletResponse response) throws IOException {
-		try {
-			{#lowercase}{{classname}}{/lowercase}Service.exportSpreadsheet(sortField, sortOrder, searchText, response.getOutputStream());
-			response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-			response.flushBuffer();
-		} catch (IOException e) {
-			response.getOutputStream().close();
-		}
-	}
+	//@RequestMapping(value = "/spreadsheets", method = RequestMethod.GET, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	//public void exportSpreadsheet(@RequestParam String sortField, @RequestParam Boolean sortOrder, @RequestParam Optional<String> searchText,
+	//	HttpServletResponse response) throws IOException {
+	//	try {
+	//		{#lowercase}{{classname}}{/lowercase}Service.exportSpreadsheet(sortField, sortOrder, searchText, response.getOutputStream());
+	//		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+	//		response.flushBuffer();
+	//	} catch (IOException e) {
+	//		response.getOutputStream().close();
+	//	}
+	//}
 
 }
 
@@ -131,12 +143,14 @@ package {{basePackage}}.controllers.dtos;
 
 import java.util.UUID;
 
+import java.time.OffsetDateTime;
+
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Null;
 
-import com.modelical.preconnector.api.controllers.helpers.CreateOperation;
-import com.modelical.preconnector.api.controllers.helpers.UpdateOperation;
-import com.modelical.preconnector.api.entities.{{classname}};
+import io.modelical.controllers.helpers.CreateOperation;
+import io.modelical.controllers.helpers.UpdateOperation;
+import io.modelical.entities.{{classname}};
 
 /**
  * This class represents the data transfer object of an {@link "{{classname}}"}.
@@ -170,7 +184,7 @@ public class {{classname}}Dto {
 }
 
 ##Dao
-package {{basePackage}}.daos
+package {{basePackage}}.daos;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -180,6 +194,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import {{basePackage}}.entities.{{classname}};
 
 /**
  * This class represents the data access object of a {@link "{{classname}}"}.
@@ -194,6 +209,7 @@ package {{basePackage}}.services;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -234,7 +250,7 @@ public interface {{classname}}Service {
 	 * Returns the current {#lowercase}{{classname}}{/lowercase}.
 	 * @return the current {#lowercase}{{classname}}{/lowercase}
 	 */
-	{{classname}} get();
+	//{{classname}} get();
 
 	/**
 	 * Creates a {#lowercase}{{classname}}{/lowercase}.
@@ -249,6 +265,12 @@ public interface {{classname}}Service {
 	 * @return the {#lowercase}{{classname}}{/lowercase}
 	 */
 	{{classname}} update({{classname}} {#lowercase}{{classname}}{/lowercase});
+
+	/**
+	 * Deletes a {#lowercase}{{classname}}{/lowercase}
+	 * @param id - the {#lowercase}{{classname}}{/lowercase} id
+	 */
+	void delete(Long id);
 
 }
 
@@ -320,13 +342,13 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 		return {#lowercase}{{classname}}{/lowercase}Dao.findById(id).orElseThrow(() -> new NotFoundException("{#lowercase}{{classname}}{/lowercase} not found"));
 	}
 
-	@Override
-	@Transactional(readOnly = true)
-	public {{classname}} get() {
-		{{classname}} {#lowercase}{{classname}}{/lowercase} = {#lowercase}{{classname}}{/lowercase}Dao.findById(authService.get{{classname}}Id()).orElseThrow(() -> new NotFoundException("{#lowercase}{{classname}}{/lowercase} not found"));
-
-		return {#lowercase}{{classname}}{/lowercase};
-	}
+	//@Override
+	//@Transactional(readOnly = true)
+	//public {{classname}} get() {
+	//	{{classname}} {#lowercase}{{classname}}{/lowercase} = {#lowercase}{{classname}}{/lowercase}Dao.findById(authService.get{{classname}}Id()).orElseThrow(() -> new NotFoundException("{#lowercase}{{classname}}{/lowercase} not found"));
+	//
+	//	return {#lowercase}{{classname}}{/lowercase};
+	//}
 
 	@Override
 	@Transactional
@@ -344,6 +366,15 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 		validate({#lowercase}{{classname}}{/lowercase});
 
 		return {#lowercase}{{classname}}{/lowercase}Dao.save({#lowercase}{{classname}}{/lowercase});
+	}
+
+	@Override
+	@Transactional
+	public void delete(Long id) {
+
+		{{classname}} stored{{classname}} = {#lowercase}{{classname}}{/lowercase}Dao.findById(id).orElseThrow(() -> new NotFoundException("{#lowercase}{{classname}}{/lowercase} not found"));
+
+		{#lowercase}{{classname}}{/lowercase}Dao.delete(stored{{classname}});
 	}
 
 	/**
