@@ -29,7 +29,7 @@ import com.vladmihalcea.hibernate.type.json.JsonType;
 @Entity
 @Table(name = "{#lowercase}{{classname}}{/lowercase}")
 @TypeDef(name = "json", typeClass = JsonType.class)
-public abstract class {{classname}} {
+public class {{classname}} {
 
 {{#models}}
 {{#model}}
@@ -81,26 +81,44 @@ public abstract class {{classname}} {
 package {{basePackage}}.controllers;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import {{basePackage}}.controllers.dtos.{{classname}}Dto;
 import {{basePackage}}.entities.{{classname}};
 import {{basePackage}}.services.{{classname}}Service;
 
 @RestController
-@RequestMapping("/{#lowercase}{{classname}}{/lowercase}s")
 public class {{classname}}Controller {
 
 	@Resource
@@ -108,33 +126,6 @@ public class {{classname}}Controller {
 
 	@Resource
 	private {{classname}}Service {#lowercase}{{classname}}{/lowercase}Service;
-
-	@RequestMapping(path = "/{id}", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public {{classname}}Dto get(@PathVariable Long id) {
-		{{classname}} {#lowercase}{{classname}}{/lowercase} = {#lowercase}{{classname}}{/lowercase}Service.get(id);
-
-		return mapper.map({#lowercase}{{classname}}{/lowercase}, {{classname}}Dto.class);
-	}
-
-	@RequestMapping(method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-	public Page<{{classname}}Dto> list(@RequestParam Integer page, @RequestParam Integer size, @RequestParam String sortField, @RequestParam Boolean sortOrder,
-		@RequestParam Optional<String> searchText) {
-		Page<{{classname}}> {#lowercase}{{classname}}{/lowercase}sPage = {#lowercase}{{classname}}{/lowercase}Service.list(page, size, sortField, sortOrder, searchText);
-
-		return {#lowercase}{{classname}}{/lowercase}sPage.map(p -> mapper.map(p, {{classname}}Dto.class));
-	}
-
-	//@RequestMapping(value = "/spreadsheets", method = RequestMethod.GET, produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-	//public void exportSpreadsheet(@RequestParam String sortField, @RequestParam Boolean sortOrder, @RequestParam Optional<String> searchText,
-	//	HttpServletResponse response) throws IOException {
-	//	try {
-	//		{#lowercase}{{classname}}{/lowercase}Service.exportSpreadsheet(sortField, sortOrder, searchText, response.getOutputStream());
-	//		response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-	//		response.flushBuffer();
-	//	} catch (IOException e) {
-	//		response.getOutputStream().close();
-	//	}
-	//}
 
 }
 
@@ -364,9 +355,22 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	public {{classname}} update({{classname}} {#lowercase}{{classname}}{/lowercase}) {
 
 		validate({#lowercase}{{classname}}{/lowercase});
+		
+		// save ({#lowercase}{{classname}}{/lowercase})
+		{{classname}} stored{{classname}} = {#lowercase}{{classname}}{/lowercase}Dao.findById({#lowercase}{{classname}}{/lowercase}.getId()).orElseThrow(() -> new NotFoundException("{{classname}} not found"));
 
-		return {#lowercase}{{classname}}{/lowercase}Dao.save({#lowercase}{{classname}}{/lowercase});
-	}
+{{#models}}
+{{#model}}
+{{#vars}}
+{{^@first}}
+		stored{{classname}}.set{#uppercase}{{name}}{/uppercase}({#lowercase}{{classname}}{/lowercase}.get{#uppercase}{{name}}{/uppercase}());
+{{/@first}}
+{{/vars}}
+{{/model}}
+{{/models}}
+
+		return {#lowercase}{{classname}}{/lowercase}Dao.save(stored{{classname}});
+	}	
 
 	@Override
 	@Transactional
