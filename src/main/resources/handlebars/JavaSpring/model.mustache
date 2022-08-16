@@ -81,11 +81,14 @@ public class {{classname}} {
 package {{basePackage}}.controllers;
 
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.constraints.NotNull;
 import javax.validation.Valid;
@@ -116,6 +119,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 
 import {{basePackage}}.controllers.dtos.{{classname}}Dto;
+import {{basePackage}}.controllers.helpers.RequestHandler;
 import {{basePackage}}.entities.{{classname}};
 import {{basePackage}}.services.{{classname}}Service;
 
@@ -140,9 +144,9 @@ import java.time.OffsetDateTime;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Null;
 
-import io.modelical.controllers.helpers.CreateOperation;
-import io.modelical.controllers.helpers.UpdateOperation;
-import io.modelical.entities.{{classname}};
+import {{basePackage}}.controllers.helpers.CreateOperation;
+import {{basePackage}}.controllers.helpers.UpdateOperation;
+import {{basePackage}}.entities.{{classname}};
 
 /**
  * This class represents the data transfer object of an {@link "{{classname}}"}.
@@ -215,16 +219,22 @@ import {{basePackage}}.entities.{{classname}};
 public interface {{classname}}Service {
 
 	/**
-	 * Returns the {#lowercase}{{classname}}{/lowercase}s using pagination and filtered by search text.
+	 * Returns the {#lowercase}{{classname}}{/lowercase}s using pagination and filtered.
 	 * @param page - the page
 	 * @param size - the page size
 	 * @param sortField - the sorting field
 	 * @param sortOrder - the sorting order
-	 * @param searchText - the search text
+	 * @param filter - the filter model
 	 * @return the {#lowercase}{{classname}}{/lowercase}s
 	 */
-	Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, Optional<String> searchText);
-
+	Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, {{classname}} filter);
+	
+	/**
+	 * Returns all {#lowercase}{{classname}}{/lowercase}s filtered.
+	 * @return the {#lowercase}{{classname}}{/lowercase}s filtered
+	 */
+	List<{{classname}}> list({{classname}} filter);
+	
 	/**
 	 * Returns all {#lowercase}{{classname}}{/lowercase}s.
 	 * @return the {#lowercase}{{classname}}{/lowercase}s
@@ -272,6 +282,7 @@ package {{basePackage}}.services.impl;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
 import javax.annotation.Resource;
@@ -284,6 +295,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.InputStreamSource;
+import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -313,13 +325,20 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 
 	@Override
 	@Transactional(readOnly = true)
-	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, Optional<String> searchText) {
-		Page<{{classname}}> {#lowercase}{{classname}}{/lowercase}s;
+	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, {{classname}} filter) {
 		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
 		
+		Page<{{classname}}> {#lowercase}{{classname}}{/lowercase}s;
 		{#lowercase}{{classname}}{/lowercase}s = {#lowercase}{{classname}}{/lowercase}Dao.findAll(pageable);
+		//{#lowercase}{{classname}}{/lowercase}s = {#lowercase}{{classname}}{/lowercase}Dao.findAll(Example.of(filter));
 
 		return {#lowercase}{{classname}}{/lowercase}s;
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<{{classname}}> list({{classname}} {#lowercase}{{classname}}{/lowercase}Filter) {
+		return {#lowercase}{{classname}}{/lowercase}Dao.findAll(Example.of({#lowercase}{{classname}}{/lowercase}Filter));
 	}
 
 	@Override
