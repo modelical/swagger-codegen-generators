@@ -81,6 +81,7 @@ public class {{classname}} {
 package {{basePackage}}.controllers;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -329,8 +330,7 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
 		
 		Page<{{classname}}> {#lowercase}{{classname}}{/lowercase}s;
-		{#lowercase}{{classname}}{/lowercase}s = {#lowercase}{{classname}}{/lowercase}Dao.findAll(pageable);
-		//{#lowercase}{{classname}}{/lowercase}s = {#lowercase}{{classname}}{/lowercase}Dao.findAll(Example.of(filter));
+		{#lowercase}{{classname}}{/lowercase}s = {#lowercase}{{classname}}{/lowercase}Dao.findAll(Example.of(filter), pageable);
 
 		return {#lowercase}{{classname}}{/lowercase}s;
 	}
