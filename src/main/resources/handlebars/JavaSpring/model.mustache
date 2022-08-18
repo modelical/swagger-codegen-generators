@@ -21,6 +21,7 @@ import java.util.UUID;
 import org.hibernate.annotations.Type;
 import org.hibernate.annotations.TypeDef;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 
 /**
@@ -58,7 +59,7 @@ public class {{classname}} {
 {{#vars}}
 {{#isObject}}
 	@Type(type = "json")
-	@Column(columnDefinition = "json")
+	@Column(name = "{{name}}", columnDefinition = "json")
 {{/isObject}}
 {{^isObject}}
 	@Column(name = "{{name}}")
@@ -148,6 +149,8 @@ import javax.validation.constraints.Null;
 import {{basePackage}}.controllers.helpers.CreateOperation;
 import {{basePackage}}.controllers.helpers.UpdateOperation;
 import {{basePackage}}.entities.{{classname}};
+
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * This class represents the data transfer object of an {@link "{{classname}}"}.
