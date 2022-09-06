@@ -2,18 +2,51 @@
 package {{basePackage}}.entities;
 
 import javax.persistence.Column;
-import javax.persistence.Embedded;
 import javax.persistence.Entity;
+import javax.persistence.PrePersist;
+import javax.persistence.PreUpdate;
+import javax.persistence.Table;
+
+import {{basePackage}}.entities.base.{{classname}}Base;
+
+/**
+ * This class represents a {#lowercase}{{classname}}{/lowercase}.
+ */
+@Entity
+@Table(name = "{#lowercase}{{classname}}{/lowercase}")
+public class {{classname}} extends {{classname}}Base {
+
+	public {{classname}}() {
+		super();
+	}
+
+	@PrePersist
+    @Override
+	public void onCreate() {
+		super.onCreate();
+	}
+
+	@PreUpdate
+    @Override
+	public void onUpdate() {
+		super.onUpdate();
+	}
+}
+
+##Base
+package {{basePackage}}.entities.base;
+
+import java.io.Serializable;
+
+import javax.persistence.Column;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.Inheritance;
-import javax.persistence.InheritanceType;
+import javax.persistence.MappedSuperclass;
 import javax.persistence.PrePersist;
 import javax.persistence.PreUpdate;
-import javax.persistence.Table;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;
@@ -25,12 +58,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.vladmihalcea.hibernate.type.json.JsonType;
 
 /**
- * This class represents a {#lowercase}{{classname}}{/lowercase}.
+ * This class represents a {#lowercase}{{classname}}{/lowercase} base.
  */
-@Entity
-@Table(name = "{#lowercase}{{classname}}{/lowercase}")
+@MappedSuperclass
 @TypeDef(name = "json", typeClass = JsonType.class)
-public class {{classname}} {
+public class {{classname}}Base implements Serializable {
 
 {{#models}}
 {{#model}}
@@ -40,7 +72,7 @@ public class {{classname}} {
 {{/model}}
 {{/models}}
 
-	public {{classname}}() {
+	public {{classname}}Base() {
 		super();
 	}
 
@@ -81,13 +113,10 @@ public class {{classname}} {
 ##Controller
 package {{basePackage}}.controllers;
 
-import java.io.IOException;
 import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -186,32 +215,98 @@ public class {{classname}}Dto {
 ##Dao
 package {{basePackage}}.daos;
 
-import java.util.Optional;
-import java.util.UUID;
-
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 
+import {{basePackage}}.daos.repositories.{{classname}}Repository;
 import {{basePackage}}.entities.{{classname}};
 
 /**
  * This class represents the data access object of a {@link "{{classname}}"}.
  */
-public interface {{classname}}Dao extends JpaRepository<{{classname}}, Long> {
+public interface {{classname}}Dao extends JpaRepository<{{classname}}, Long>, {{classname}}Repository {
 
+}
+
+##Repository
+package {{basePackage}}.daos.repositories;
+
+import java.util.Map;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import {{basePackage}}.entities.{{classname}};
+
+/**
+ * This class represents the Hibernate data access object of a {@link "{{classname}}"}.
+ */
+public interface {{classname}}Repository {
+	Page<{{classname}}> filterAdvanced(Map<String, Object> filter, Pageable pageable);
+	Page<{{classname}}> filterBasic(String filter, Pageable pageable);
+}
+
+##RepositoryImpl
+package {{basePackage}}.daos.repositories.impl;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import javax.persistence.EntityManager;
+import javax.persistence.PersistenceContext;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
+import {{basePackage}}.daos.repositories.{{classname}}Repository;
+import {{basePackage}}.entities.{{classname}};
+
+/**
+ * This class represents the Hibernate data access object of a {@link "{{classname}}"}.
+ */
+public class {{classname}}RepositoryImpl implements {{classname}}Repository {
+	
+	@PersistenceContext
+	EntityManager entityManager;
+
+	@Override
+	public Page<{{classname}}> filterAdvanced(Map<String, Object> filter, Pageable pageable) {
+		
+		List<{{classname}}> results = Collections.emptyList();
+		
+		String sql = "SELECT * from `{#lowercase}{{classname}}{/lowercase}` WHERE ";
+		for (Map.Entry<String, Object> entry : filter.entrySet()) {
+			sql += "`" + entry.getKey() + "`=`" + entry.getValue() + "` AND ";
+		}
+		if (sql.endsWith(" AND ")) {
+			sql = sql.substring(0, sql.length() - 5);
+		}
+		
+		results = entityManager.createNativeQuery(sql, {{classname}}.class).getResultList();
+		
+		return new PageImpl<>(results, pageable, results.size());
+	}
+
+	@Override
+	public Page<{{classname}}> filterBasic(String filter, Pageable pageable) {
+	
+		List<{{classname}}> results = Collections.emptyList();
+		
+		String sql = "SELECT * from `{#lowercase}{{classname}}{/lowercase}` ";
+		
+		results = entityManager.createNativeQuery(sql, {{classname}}.class).getResultList();
+		
+		return new PageImpl<>(results, pageable, results.size());
+	}
 }
 
 
 ##Service
 package {{basePackage}}.services;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.Map;
 
 import org.springframework.data.domain.Page;
 
@@ -232,6 +327,28 @@ public interface {{classname}}Service {
 	 * @return the {#lowercase}{{classname}}{/lowercase}s
 	 */
 	Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, {{classname}} filter);
+
+	/**
+	 * Returns the {#lowercase}{{classname}}{/lowercase}s using pagination and filtered by params.
+	 * @param page - the page
+	 * @param size - the page size
+	 * @param sortField - the sorting field
+	 * @param sortOrder - the sorting order
+	 * @param filter - the advanced params
+	 * @return the {#lowercase}{{classname}}{/lowercase}s
+	 */
+	Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, Map<String, Object> filter);
+
+	/**
+	 * Returns the {#lowercase}{{classname}}{/lowercase}s using pagination and filtered by text.
+	 * @param page - the page
+	 * @param size - the page size
+	 * @param sortField - the sorting field
+	 * @param sortOrder - the sorting order
+	 * @param filter - the filter text
+	 * @return the {#lowercase}{{classname}}{/lowercase}s
+	 */
+	Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, String filter);
 	
 	/**
 	 * Returns all {#lowercase}{{classname}}{/lowercase}s filtered.
@@ -283,33 +400,18 @@ public interface {{classname}}Service {
 ##ServiceImpl
 package {{basePackage}}.services.impl;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Optional;
-
 import javax.annotation.Resource;
-import javax.mail.MessagingException;
-import javax.mail.internet.MimeMessage;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.InputStreamSource;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort.Direction;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.thymeleaf.TemplateEngine;
-import org.thymeleaf.context.Context;
 
 import {{basePackage}}.Properties;
 import {{basePackage}}.daos.{{classname}}Dao;
@@ -331,11 +433,21 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	@Transactional(readOnly = true)
 	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, {{classname}} filter) {
 		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
-		
-		Page<{{classname}}> {#lowercase}{{classname}}{/lowercase}s;
-		{#lowercase}{{classname}}{/lowercase}s = {#lowercase}{{classname}}{/lowercase}Dao.findAll(Example.of(filter), pageable);
+		return {#lowercase}{{classname}}{/lowercase}Dao.findAll(Example.of(filter), pageable);
+	}
 
-		return {#lowercase}{{classname}}{/lowercase}s;
+	@Override
+	@Transactional(readOnly = true)
+	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, Map<String, Object> filter) {
+		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
+		return {#lowercase}{{classname}}{/lowercase}Dao.filterAdvanced(filter, pageable);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, String filter) {
+		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
+		return {#lowercase}{{classname}}{/lowercase}Dao.filterBasic(filter, pageable);
 	}
 
 	@Override
