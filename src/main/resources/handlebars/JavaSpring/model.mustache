@@ -248,6 +248,7 @@ public interface {{classname}}Repository {
 ##RepositoryImpl
 package {{basePackage}}.daos.repositories.impl;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -283,10 +284,17 @@ public class {{classname}}RepositoryImpl implements {{classname}}Repository {
 			sql = sql.substring(0, sql.length() - 5);
 		}
 		
-		results = entityManager.createNativeQuery(sql, {{classname}}.class)
-		.setMaxResults(pageable.getPageSize())
-		.setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
-		.getResultList();
+		results = entityManager.createNativeQuery(sql, {{classname}}.class).getResultList();
+		
+		int total = results.size();
+		int start = (int)pageable.getOffset();
+		int end = Math.min((start + pageable.getPageSize()), total);
+		
+		List<Project> output = new ArrayList<>();
+		
+		if (start <= end) {
+			output = results.subList(start, end);
+		}
 		
 		return new PageImpl<>(results, pageable, pageable.getPageSize());
 	}
@@ -298,10 +306,17 @@ public class {{classname}}RepositoryImpl implements {{classname}}Repository {
 		
 		String sql = "SELECT * from `{#lowercase}{{classname}}{/lowercase}` ";
 		
-		results = entityManager.createNativeQuery(sql, {{classname}}.class)
-		.setMaxResults(pageable.getPageSize())
-		.setFirstResult(pageable.getPageNumber() * pageable.getPageSize())
-		.getResultList();
+		results = entityManager.createNativeQuery(sql, {{classname}}.class).getResultList();
+		
+		int total = results.size();
+		int start = (int)pageable.getOffset();
+		int end = Math.min((start + pageable.getPageSize()), total);
+		
+		List<Project> output = new ArrayList<>();
+		
+		if (start <= end) {
+			output = results.subList(start, end);
+		}
 		
 		return new PageImpl<>(results, pageable, pageable.getPageSize());
 	}
