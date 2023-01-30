@@ -290,7 +290,7 @@ public class {{classname}}RepositoryImpl implements {{classname}}Repository {
 		int start = (int)pageable.getOffset();
 		int end = Math.min((start + pageable.getPageSize()), total);
 		
-		List<Project> output = new ArrayList<>();
+		List<{{classname}}> output = new ArrayList<>();
 		
 		if (start <= end) {
 			output = results.subList(start, end);
@@ -312,7 +312,7 @@ public class {{classname}}RepositoryImpl implements {{classname}}Repository {
 		int start = (int)pageable.getOffset();
 		int end = Math.min((start + pageable.getPageSize()), total);
 		
-		List<Project> output = new ArrayList<>();
+		List<{{classname}}> output = new ArrayList<>();
 		
 		if (start <= end) {
 			output = results.subList(start, end);
@@ -425,6 +425,9 @@ import java.util.List;
 import java.util.Map;
 import javax.annotation.Resource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
@@ -439,10 +442,16 @@ import {{basePackage}}.daos.{{classname}}Dao;
 import {{basePackage}}.entities.{{classname}};
 import {{basePackage}}.exceptions.DuplicateException;
 import {{basePackage}}.exceptions.NotFoundException;
+import {{basePackage}}.security.AuthService;
 import {{basePackage}}.services.{{classname}}Service;
 
 @Service
 public class {{classname}}ServiceImpl implements {{classname}}Service {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger({{classname}}ServiceImpl.class);
+
+	@Resource
+	private AuthService authService;
 
 	@Autowired
 	private Properties properties;
@@ -453,6 +462,7 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	@Override
 	@Transactional(readOnly = true)
 	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, {{classname}} filter) {
+		LOGGER.info("{}: list {{classname}} - page: {}, size: {}", authService.getLogId(), page, size);
 		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
 		return {#lowercase}{{classname}}{/lowercase}Dao.findAll(Example.of(filter), pageable);
 	}
@@ -460,6 +470,7 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	@Override
 	@Transactional(readOnly = true)
 	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, Map<String, Object> filter) {
+		LOGGER.info("{}: list {{classname}} - page: {}, size: {}", authService.getLogId(), page, size);
 		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
 		return {#lowercase}{{classname}}{/lowercase}Dao.filterAdvanced(filter, pageable);
 	}
@@ -467,6 +478,7 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	@Override
 	@Transactional(readOnly = true)
 	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, String filter) {
+		LOGGER.info("{}: list {{classname}} - page: {}, size: {}", authService.getLogId(), page, size);
 		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
 		return {#lowercase}{{classname}}{/lowercase}Dao.filterBasic(filter, pageable);
 	}
@@ -474,18 +486,21 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	@Override
 	@Transactional(readOnly = true)
 	public List<{{classname}}> list({{classname}} {#lowercase}{{classname}}{/lowercase}Filter) {
+		LOGGER.info("{}: list {{classname}}", authService.getLogId());
 		return {#lowercase}{{classname}}{/lowercase}Dao.findAll(Example.of({#lowercase}{{classname}}{/lowercase}Filter));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public List<{{classname}}> list() {
+		LOGGER.info("{}: list {{classname}}", authService.getLogId());
 		return {#lowercase}{{classname}}{/lowercase}Dao.findAll();
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public {{classname}} get(Long id) {
+		LOGGER.info("{}: get {{classname}}, {{classname}}Id: {}", authService.getLogId(), id);
 		return {#lowercase}{{classname}}{/lowercase}Dao.findById(id).orElseThrow(() -> new NotFoundException("{#lowercase}{{classname}}{/lowercase} not found"));
 	}
 
@@ -500,6 +515,7 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	@Override
 	@Transactional
 	public {{classname}} create({{classname}} {#lowercase}{{classname}}{/lowercase}) {
+		LOGGER.info("{}: create {{classname}}", authService.getLogId());
 	
 		validate({#lowercase}{{classname}}{/lowercase});
 
@@ -509,6 +525,7 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	@Override
 	@Transactional
 	public {{classname}} update({{classname}} {#lowercase}{{classname}}{/lowercase}) {
+		LOGGER.info("{}: update {{classname}}, {{classname}}Id: {}", authService.getLogId(), id);
 
 		validate({#lowercase}{{classname}}{/lowercase});
 		
@@ -531,6 +548,7 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	@Override
 	@Transactional
 	public void delete(Long id) {
+		LOGGER.info("{}: delete {{classname}}, {{classname}}Id: {}", authService.getLogId(), id);
 
 		{{classname}} stored{{classname}} = {#lowercase}{{classname}}{/lowercase}Dao.findById(id).orElseThrow(() -> new NotFoundException("{#lowercase}{{classname}}{/lowercase} not found"));
 
