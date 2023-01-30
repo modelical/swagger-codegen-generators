@@ -241,8 +241,8 @@ import {{basePackage}}.entities.{{classname}};
  * This class represents the Hibernate data access object of a {@link "{{classname}}"}.
  */
 public interface {{classname}}Repository {
-	Page<{{classname}}> filterAdvanced(Map<String, Object> filter, Pageable pageable);
-	Page<{{classname}}> filterBasic(String filter, Pageable pageable);
+	Page<{{classname}}> filterAdvanced(Map<String, Object> filter, Pageable pageable, Integer limit);
+	Page<{{classname}}> filterBasic(String filter, Pageable pageable, Integer limit);
 }
 
 ##RepositoryImpl
@@ -272,7 +272,7 @@ public class {{classname}}RepositoryImpl implements {{classname}}Repository {
 	EntityManager entityManager;
 
 	@Override
-	public Page<{{classname}}> filterAdvanced(Map<String, Object> filter, Pageable pageable) {
+	public Page<{{classname}}> filterAdvanced(Map<String, Object> filter, Pageable pageable, Integer limit) {
 		
 		List<{{classname}}> results = Collections.emptyList();
 		
@@ -282,6 +282,9 @@ public class {{classname}}RepositoryImpl implements {{classname}}Repository {
 		}
 		if (sql.endsWith(" AND ")) {
 			sql = sql.substring(0, sql.length() - 5);
+		}
+		if (limit > 0) {
+			sql += " LIMIT " + limit;
 		}
 		
 		results = entityManager.createNativeQuery(sql, {{classname}}.class).getResultList();
@@ -300,12 +303,16 @@ public class {{classname}}RepositoryImpl implements {{classname}}Repository {
 	}
 
 	@Override
-	public Page<{{classname}}> filterBasic(String filter, Pageable pageable) {
+	public Page<{{classname}}> filterBasic(String filter, Pageable pageable, Integer limit) {
 	
 		List<{{classname}}> results = Collections.emptyList();
 		
 		String sql = "SELECT * from `{#lowercase}{{classname}}{/lowercase}` ";
-		
+
+		if (limit > 0) {
+			sql += " LIMIT " + limit;
+		}
+
 		results = entityManager.createNativeQuery(sql, {{classname}}.class).getResultList();
 		
 		int total = results.size();
@@ -330,7 +337,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
-
+import {{basePackage}}.controllers.helpers.RequestParam;
 import {{basePackage}}.entities.{{classname}};
 
 /**
@@ -342,34 +349,37 @@ public interface {{classname}}Service {
 	 * Returns the {#lowercase}{{classname}}{/lowercase}s using pagination and filtered.
 	 * @param page - the page
 	 * @param size - the page size
+	 * @param limit - the search limit
 	 * @param sortField - the sorting field
 	 * @param sortOrder - the sorting order
 	 * @param filter - the filter model
 	 * @return the {#lowercase}{{classname}}{/lowercase}s
 	 */
-	Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, {{classname}} filter);
+	Page<{{classname}}> list(Integer page, Integer size, Integer limit, String sortField, Boolean sortOrder, {{classname}} filter);
 
 	/**
 	 * Returns the {#lowercase}{{classname}}{/lowercase}s using pagination and filtered by params.
 	 * @param page - the page
 	 * @param size - the page size
+	 * @param limit - the search limit
 	 * @param sortField - the sorting field
 	 * @param sortOrder - the sorting order
 	 * @param filter - the advanced params
 	 * @return the {#lowercase}{{classname}}{/lowercase}s
 	 */
-	Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, Map<String, Object> filter);
+	Page<{{classname}}> list(Integer page, Integer size, Integer limit, String sortField, Boolean sortOrder, List<RequestParam>  filter);
 
 	/**
 	 * Returns the {#lowercase}{{classname}}{/lowercase}s using pagination and filtered by text.
 	 * @param page - the page
 	 * @param size - the page size
+	 * @param limit - the search limit
 	 * @param sortField - the sorting field
 	 * @param sortOrder - the sorting order
 	 * @param filter - the filter text
 	 * @return the {#lowercase}{{classname}}{/lowercase}s
 	 */
-	Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, String filter);
+	Page<{{classname}}> list(Integer page, Integer size, Integer limit, String sortField, Boolean sortOrder, String filter);
 	
 	/**
 	 * Returns all {#lowercase}{{classname}}{/lowercase}s filtered.
@@ -438,6 +448,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import {{basePackage}}.Properties;
+import {{basePackage}}.controllers.helpers.RequestParam;
 import {{basePackage}}.daos.{{classname}}Dao;
 import {{basePackage}}.entities.{{classname}};
 import {{basePackage}}.exceptions.DuplicateException;
@@ -461,7 +472,7 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 
 	@Override
 	@Transactional(readOnly = true)
-	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, {{classname}} filter) {
+	public Page<{{classname}}> list(Integer page, Integer size, Integer limit, String sortField, Boolean sortOrder, {{classname}} filter) {
 		LOGGER.info("{}: list {{classname}} - page: {}, size: {}", authService.getLogId(), page, size);
 		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
 		return {#lowercase}{{classname}}{/lowercase}Dao.findAll(Example.of(filter), pageable);
@@ -469,18 +480,18 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 
 	@Override
 	@Transactional(readOnly = true)
-	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, Map<String, Object> filter) {
+	public Page<{{classname}}> list(Integer page, Integer size, Integer limit, String sortField, Boolean sortOrder, List<RequestParam> filter) {
 		LOGGER.info("{}: list {{classname}} - page: {}, size: {}", authService.getLogId(), page, size);
 		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
-		return {#lowercase}{{classname}}{/lowercase}Dao.filterAdvanced(filter, pageable);
+		return {#lowercase}{{classname}}{/lowercase}Dao.filterAdvanced(filter, pageable, limit);
 	}
 
 	@Override
 	@Transactional(readOnly = true)
-	public Page<{{classname}}> list(Integer page, Integer size, String sortField, Boolean sortOrder, String filter) {
+	public Page<{{classname}}> list(Integer page, Integer size, Integer limit, String sortField, Boolean sortOrder, String filter) {
 		LOGGER.info("{}: list {{classname}} - page: {}, size: {}", authService.getLogId(), page, size);
 		final Pageable pageable = PageRequest.of(page, size, sortOrder ? Direction.ASC : Direction.DESC, sortField);
-		return {#lowercase}{{classname}}{/lowercase}Dao.filterBasic(filter, pageable);
+		return {#lowercase}{{classname}}{/lowercase}Dao.filterBasic(filter, pageable, limit);
 	}
 
 	@Override
@@ -500,7 +511,7 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	@Override
 	@Transactional(readOnly = true)
 	public {{classname}} get(Long id) {
-		LOGGER.info("{}: get {{classname}}, {{classname}}Id: {}", authService.getLogId(), id);
+		LOGGER.info("{}: get {{classname}}, {{classname}} Id: {}", authService.getLogId(), id);
 		return {#lowercase}{{classname}}{/lowercase}Dao.findById(id).orElseThrow(() -> new NotFoundException("{#lowercase}{{classname}}{/lowercase} not found"));
 	}
 
@@ -525,7 +536,7 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	@Override
 	@Transactional
 	public {{classname}} update({{classname}} {#lowercase}{{classname}}{/lowercase}) {
-		LOGGER.info("{}: update {{classname}}, {{classname}}Id: {}", authService.getLogId(), id);
+		LOGGER.info("{}: update {{classname}}, {{classname}} Id: {}", authService.getLogId(), {#lowercase}{{classname}}{/lowercase}.getId());
 
 		validate({#lowercase}{{classname}}{/lowercase});
 		
@@ -548,7 +559,7 @@ public class {{classname}}ServiceImpl implements {{classname}}Service {
 	@Override
 	@Transactional
 	public void delete(Long id) {
-		LOGGER.info("{}: delete {{classname}}, {{classname}}Id: {}", authService.getLogId(), id);
+		LOGGER.info("{}: delete {{classname}}, {{classname}} Id: {}", authService.getLogId(), id);
 
 		{{classname}} stored{{classname}} = {#lowercase}{{classname}}{/lowercase}Dao.findById(id).orElseThrow(() -> new NotFoundException("{#lowercase}{{classname}}{/lowercase} not found"));
 
